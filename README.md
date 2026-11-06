@@ -13,6 +13,8 @@ pip install -r requirements.txt
 uvicorn app:app
 ```
 
+Open [the explorer](http://127.0.0.1:8000/) to view the four saved charts or submit a live query. Saved examples load without API credentials. A live query uses the configured LLM and registry APIs. Enable **Include source records** and expand the data table to inspect contributing registry entries.
+
 ```sh
 curl -fsS http://127.0.0.1:8000/query \
   -H 'Content-Type: application/json' \
@@ -46,3 +48,17 @@ The service follows the ClinicalTrials.gov pagination token until the last page 
 The phase distribution uses the registry's condition search (`query.cond`). It counts each unique trial once per listed phase. A Phase 1/Phase 2 trial contributes to both bars, so the sum of bars can exceed the number of unique trials. Registry `NA` means “Not applicable.” Missing or empty phase lists are counted under “Not reported.”
 
 The LLM extracts an intent and the relevant drug names, start year, or condition. The backend validates that plan and resolves it against the structured inputs before retrieving and counting trials. Missing LLM configuration returns HTTP 503. Provider failures or malformed model output return HTTP 502.
+
+## Data-point citations
+
+Set `include_citations` to `true` in the request to include a `citations` list on each chart row. Each entry contains a contributing `nct_id` and `raw_fields`, keyed by paths relative to the registry's `protocolSection`. Year rows include the original start date and date type, phase rows include the original phase list when present, and country rows include the country and status of a qualifying site. An empty `raw_fields` object for a “Not reported” phase means the registry omitted the field. Zero-count rows return an empty citation list. Each row includes all contributing IDs, so opting in can substantially increase the response size. The default response omits citations.
+
+## Tests
+
+Run `python -m unittest discover -s tests -v`. The tests exercise `/query` with stubbed LLM and registry responses and require no API credentials.
+
+## Design tradeoffs and limitations
+
+The model selects a supported intent and extracts its parameters. The server validates them and owns pagination, deduplication, counts, and chart formatting. This limits the model's ability to change how trials are counted. The available intents cover four query shapes. Registry search may include related terms, and registry updates can change live counts. The service reads all result pages, so broad questions can be slower. A production version would add caching and a total query time budget.
+
+Codex assisted with implementation, documentation, and tests. Verification used fixed upstream responses for failure and counting cases and live LLM and ClinicalTrials.gov calls for the saved examples. The aggregation rules and citation fields are implemented explicitly in Python.

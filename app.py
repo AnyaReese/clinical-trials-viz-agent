@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from collections import Counter
+from collections import defaultdict
 from collections.abc import Iterable
 from datetime import date
 from pathlib import Path
@@ -13,6 +13,8 @@ from urllib.request import urlopen
 import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 
 STUDIES_URL = "https://clinicaltrials.gov/api/v2/studies"
@@ -20,9 +22,17 @@ DATE_FORMAT = re.compile(r"[0-9]{4}(?:-[0-9]{2}(?:-[0-9]{2})?)?")
 SearchTerm = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=120)]
 QueryText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=500)]
 
-load_dotenv(Path(__file__).with_name(".env"))
+PROJECT_DIR = Path(__file__).resolve().parent
+load_dotenv(PROJECT_DIR / ".env")
 
 app = FastAPI(title="Clinical Trials Visualization Agent")
+app.mount("/assets", StaticFiles(directory=PROJECT_DIR / "frontend"), name="assets")
+app.mount("/examples", StaticFiles(directory=PROJECT_DIR / "examples"), name="examples")
+
+
+@app.get("/", include_in_schema=False)
+def explorer() -> FileResponse:
+    return FileResponse(PROJECT_DIR / "frontend" / "index.html")
 
 
 class QueryRequest(BaseModel):
@@ -32,6 +42,7 @@ class QueryRequest(BaseModel):
     drug_name: SearchTerm | None = None
     condition: SearchTerm | None = None
     start_year: int | None = Field(default=None, ge=1900, le=9999, strict=True)
+    include_citations: bool = False
 
 
 class TrendFilters(BaseModel):
@@ -49,9 +60,18 @@ class QueryPlan(BaseModel):
     start_year: int | None
 
 
-class YearCount(BaseModel):
-    year: int
+class TrialCitation(BaseModel):
+    nct_id: str
+    raw_fields: dict[str, str | list[str] | None]
+
+
+class TrialCount(BaseModel):
     trial_count: int
+    citations: list[TrialCitation] | None = None
+
+
+class YearCount(TrialCount):
+    year: int
 
 
 class EncodingField(BaseModel):
@@ -84,9 +104,8 @@ class TrendResponse(BaseModel):
     meta: TrendMetadata
 
 
-class PhaseCount(BaseModel):
+class PhaseCount(TrialCount):
     phase: str
-    trial_count: int
 
 
 class PhaseBarChart(BaseModel):
@@ -142,9 +161,8 @@ class PhaseResponse(BaseModel):
     meta: PhaseMetadata
 
 
-class CountryCount(BaseModel):
+class CountryCount(TrialCount):
     country: str
-    trial_count: int
 
 
 class CountryBarChart(BaseModel):
@@ -202,7 +220,7 @@ def parse_query(request: QueryRequest) -> QueryPlan:
                             "implicit values. Do not infer values or copy them from structured fields."
                         ),
                     },
-                    {"role": "user", "content": request.model_dump_json()},
+                    {"role": "user", "content": request.model_dump_json(exclude={"include_citations"})},
                 ],
                 "response_format": {
                     "type": "json_schema",
@@ -289,9 +307,11 @@ def fetch_protocols(search: dict[str, str], fields: str) -> dict[str, dict]:
     return protocols_by_id
 
 
-def count_actual_starts(dates_by_id: dict[str, dict], start_year: int, end_year: int) -> Counter[int]:
-    counts: Counter[int] = Counter()
-    for start in dates_by_id.values():
+def bucket_actual_starts(
+    dates_by_id: dict[str, dict], start_year: int, end_year: int
+) -> dict[int, list[TrialCitation]]:
+    buckets: dict[int, list[TrialCitation]] = defaultdict(list)
+    for nct_id, start in dates_by_id.items():
         value = start.get("date", "")
         if start.get("type") != "ACTUAL" or not DATE_FORMAT.fullmatch(value):
             continue
@@ -300,8 +320,14 @@ def count_actual_starts(dates_by_id: dict[str, dict], start_year: int, end_year:
         except ValueError:
             continue
         if start_year <= year <= end_year:
-            counts[year] += 1
-    return counts
+            buckets[year].append(TrialCitation(
+                nct_id=nct_id,
+                raw_fields={
+                    "statusModule.startDateStruct.date": value,
+                    "statusModule.startDateStruct.type": start["type"],
+                },
+            ))
+    return buckets
 
 
 PHASE_LABELS = {
@@ -315,13 +341,16 @@ PHASE_LABELS = {
 }
 
 
-def count_phases(protocols: dict[str, dict]) -> Counter[str]:
-    counts = Counter()
-    for protocol in protocols.values():
-        phases = protocol.get("designModule", {}).get("phases") or ["NOT_REPORTED"]
-        counts.update(set(phases))
-
-    return counts
+def bucket_phases(protocols: dict[str, dict]) -> dict[str, list[TrialCitation]]:
+    buckets: dict[str, list[TrialCitation]] = defaultdict(list)
+    for nct_id, protocol in protocols.items():
+        design = protocol.get("designModule", {})
+        phases = design.get("phases")
+        raw_fields = {"designModule.phases": phases} if "phases" in design else {}
+        citation = TrialCitation(nct_id=nct_id, raw_fields=raw_fields)
+        for phase in set(phases or ["NOT_REPORTED"]):
+            buckets[phase].append(citation)
+    return buckets
 
 
 def phase_order(phases: Iterable[str]) -> list[str]:
@@ -347,14 +376,18 @@ def condition_filter(request: QueryRequest, plan: QueryPlan) -> str:
 def phase_distribution(request: QueryRequest, plan: QueryPlan) -> PhaseResponse:
     condition = condition_filter(request, plan)
     protocols = fetch_protocols({"query.cond": condition}, "NCTId,Phase")
-    counts = count_phases(protocols)
+    buckets = bucket_phases(protocols)
     return PhaseResponse(
         visualization=PhaseBarChart(
             title=f"Trial phase distribution for {condition} search matches",
             encoding=Encoding(x=EncodingField(field="phase"), y=EncodingField(field="trial_count")),
             data=[
-                PhaseCount(phase=PHASE_LABELS.get(phase, phase), trial_count=counts[phase])
-                for phase in phase_order(counts)
+                PhaseCount(
+                    phase=PHASE_LABELS.get(phase, phase),
+                    trial_count=len(buckets[phase]),
+                    citations=buckets[phase] if request.include_citations else None,
+                )
+                for phase in phase_order(buckets)
             ],
         ),
         meta=PhaseMetadata(filters=ConditionFilters(condition=condition), matched_trials=len(protocols)),
@@ -377,13 +410,13 @@ def phase_comparison(request: QueryRequest, plan: QueryPlan) -> ComparisonRespon
     ):
         raise HTTPException(status_code=422, detail="Provide two distinct drug names that appear in the query.")
 
-    counts_by_drug = {}
+    buckets_by_drug = {}
     matched_trials = {}
     for drug in drugs:
         protocols = fetch_protocols({"query.intr": drug}, "NCTId,Phase")
-        counts_by_drug[drug] = count_phases(protocols)
+        buckets_by_drug[drug] = bucket_phases(protocols)
         matched_trials[drug] = len(protocols)
-    phases = phase_order(counts_by_drug[first].keys() | counts_by_drug[second].keys())
+    phases = phase_order(buckets_by_drug[first].keys() | buckets_by_drug[second].keys())
     return ComparisonResponse(
         visualization=GroupedPhaseChart(
             title=f"Trial phase comparison for {first} and {second}",
@@ -396,7 +429,8 @@ def phase_comparison(request: QueryRequest, plan: QueryPlan) -> ComparisonRespon
                 DrugPhaseCount(
                     phase=PHASE_LABELS.get(phase, phase),
                     drug_name=drug,
-                    trial_count=counts_by_drug[drug][phase],
+                    trial_count=len(buckets_by_drug[drug][phase]),
+                    citations=buckets_by_drug[drug][phase] if request.include_citations else None,
                 )
                 for phase in phases for drug in drugs
             ],
@@ -408,15 +442,22 @@ def phase_comparison(request: QueryRequest, plan: QueryPlan) -> ComparisonRespon
 def recruiting_by_country(request: QueryRequest, plan: QueryPlan) -> CountryResponse:
     condition = condition_filter(request, plan)
     protocols = fetch_protocols({"query.cond": condition}, "NCTId,LocationCountry,LocationStatus")
-    counts: Counter[str] = Counter()
+    buckets: dict[str, list[TrialCitation]] = defaultdict(list)
     recruiting_trials = 0
-    for protocol in protocols.values():
+    for nct_id, protocol in protocols.items():
         locations = protocol.get("contactsLocationsModule", {}).get("locations", [])
         countries = {
             site["country"] for site in locations
             if site.get("status") == "RECRUITING" and site.get("country")
         }
-        counts.update(countries)
+        for country in countries:
+            buckets[country].append(TrialCitation(
+                nct_id=nct_id,
+                raw_fields={
+                    "contactsLocationsModule.locations[].country": country,
+                    "contactsLocationsModule.locations[].status": "RECRUITING",
+                },
+            ))
         recruiting_trials += bool(countries)
 
     return CountryResponse(
@@ -424,8 +465,12 @@ def recruiting_by_country(request: QueryRequest, plan: QueryPlan) -> CountryResp
             title=f"Trials with recruiting sites by country for {condition} search matches",
             encoding=Encoding(x=EncodingField(field="country"), y=EncodingField(field="trial_count")),
             data=[
-                CountryCount(country=country, trial_count=counts[country])
-                for country in sorted(counts, key=lambda name: (-counts[name], name))
+                CountryCount(
+                    country=country,
+                    trial_count=len(buckets[country]),
+                    citations=buckets[country] if request.include_citations else None,
+                )
+                for country in sorted(buckets, key=lambda name: (-len(buckets[name]), name))
             ],
         ),
         meta=CountryMetadata(
@@ -444,24 +489,28 @@ def annual_starts(request: QueryRequest, plan: QueryPlan) -> TrendResponse:
         for nct_id, protocol in protocols.items()
     }
     end_year = date.today().year
-    counts = count_actual_starts(dates_by_id, filters.start_year, end_year)
+    buckets = bucket_actual_starts(dates_by_id, filters.start_year, end_year)
 
     return TrendResponse(
         visualization=TimeSeries(
             title=f"Actual trial starts by year for {filters.drug_name} search matches",
             encoding=Encoding(x=EncodingField(field="year"), y=EncodingField(field="trial_count")),
             data=[
-                YearCount(year=year, trial_count=counts[year])
+                YearCount(
+                    year=year,
+                    trial_count=len(buckets[year]),
+                    citations=buckets[year] if request.include_citations else None,
+                )
                 for year in range(filters.start_year, end_year + 1)
             ],
         ),
         meta=TrendMetadata(
-            filters=filters, matched_trials=len(dates_by_id), counted_trials=sum(counts.values())
+            filters=filters, matched_trials=len(dates_by_id), counted_trials=sum(map(len, buckets.values()))
         ),
     )
 
 
-@app.post("/query", response_model=TrendResponse | PhaseResponse | ComparisonResponse | CountryResponse)
+@app.post("/query", response_model_exclude_none=True)
 def query_trials(request: QueryRequest) -> TrendResponse | PhaseResponse | ComparisonResponse | CountryResponse:
     plan = parse_query(request)
     try:

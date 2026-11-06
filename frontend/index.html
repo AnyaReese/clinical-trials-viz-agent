@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#14223a">
+  <title>Clinical Trial Explorer</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script src="/assets/explorer.js" defer></script>
+</head>
+<body>
+  <header class="masthead">
+    <div class="masthead-inner">
+      <div class="brand">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M3 17l5-5 4 3 8-9M15 6h5v5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Trial Explorer</span>
+      </div>
+      <a class="docs" href="/docs">API documentation <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+  <main>
+    <div class="intro">
+      <p class="eyebrow"><span class="source-dot"></span> ClinicalTrials.gov registry</p>
+      <h1>Clinical Trial Explorer</h1>
+      <p>Explore trial timelines, phases, and recruiting sites with a research question.</p>
+    </div>
+    <div class="workspace">
+      <section class="panel controls" aria-label="Query controls">
+        <p class="eyebrow">Query workspace</p>
+        <form id="query-form">
+          <label for="question">Research question</label>
+          <textarea id="question" required maxlength="500" rows="4"></textarea>
+          <div class="actions">
+            <button type="submit" id="run">Run live query <span aria-hidden="true">→</span></button>
+            <label class="check"><input id="citations" type="checkbox"> Include source records</label>
+          </div>
+        </form>
+        <div class="examples" id="examples" aria-label="Saved examples">
+          <p class="eyebrow">Saved examples</p>
+        </div>
+        <p id="status" role="status"></p>
+      </section>
+      <section id="result" class="panel" aria-labelledby="chart-title" hidden>
+        <div class="result-header">
+          <p class="badge" id="source-mode"></p>
+          <h2 id="chart-title"></h2>
+          <p id="note"></p>
+        </div>
+        <div id="chart"></div>
+        <details id="details">
+          <summary>Inspect chart data and sources</summary>
+          <div id="data"></div>
+        </details>
+      </section>
+    </div>
+    <footer>Registry data from <a href="https://clinicaltrials.gov/">ClinicalTrials.gov</a></footer>
+  </main>
+</body>
+</html>
