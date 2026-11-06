@@ -1,0 +1,106 @@
+{
+  "request": {
+    "query": "Compare the trial phase distributions for Pembrolizumab and Nivolumab."
+  },
+  "response": {
+    "visualization": {
+      "type": "grouped_bar_chart",
+      "title": "Trial phase comparison for Pembrolizumab and Nivolumab",
+      "encoding": {
+        "x": {
+          "field": "phase"
+        },
+        "y": {
+          "field": "trial_count"
+        },
+        "series": {
+          "field": "drug_name"
+        }
+      },
+      "data": [
+        {
+          "phase": "Early Phase 1",
+          "trial_count": 52,
+          "drug_name": "Pembrolizumab"
+        },
+        {
+          "phase": "Early Phase 1",
+          "trial_count": 36,
+          "drug_name": "Nivolumab"
+        },
+        {
+          "phase": "Phase 1",
+          "trial_count": 1055,
+          "drug_name": "Pembrolizumab"
+        },
+        {
+          "phase": "Phase 1",
+          "trial_count": 713,
+          "drug_name": "Nivolumab"
+        },
+        {
+          "phase": "Phase 2",
+          "trial_count": 1794,
+          "drug_name": "Pembrolizumab"
+        },
+        {
+          "phase": "Phase 2",
+          "trial_count": 1170,
+          "drug_name": "Nivolumab"
+        },
+        {
+          "phase": "Phase 3",
+          "trial_count": 371,
+          "drug_name": "Pembrolizumab"
+        },
+        {
+          "phase": "Phase 3",
+          "trial_count": 186,
+          "drug_name": "Nivolumab"
+        },
+        {
+          "phase": "Phase 4",
+          "trial_count": 20,
+          "drug_name": "Pembrolizumab"
+        },
+        {
+          "phase": "Phase 4",
+          "trial_count": 18,
+          "drug_name": "Nivolumab"
+        },
+        {
+          "phase": "Not applicable",
+          "trial_count": 55,
+          "drug_name": "Pembrolizumab"
+        },
+        {
+          "phase": "Not applicable",
+          "trial_count": 51,
+          "drug_name": "Nivolumab"
+        },
+        {
+          "phase": "Not reported",
+          "trial_count": 177,
+          "drug_name": "Pembrolizumab"
+        },
+        {
+          "phase": "Not reported",
+          "trial_count": 216,
+          "drug_name": "Nivolumab"
+        }
+      ]
+    },
+    "meta": {
+      "source": "https://clinicaltrials.gov/api/v2/studies",
+      "drug_names": [
+        "Pembrolizumab",
+        "Nivolumab"
+      ],
+      "matched_trials_by_drug": {
+        "Pembrolizumab": 3003,
+        "Nivolumab": 2041
+      },
+      "counting_rule": "One count per trial per listed phase in each matching drug series. A trial matching both drugs contributes to both series."
+    }
+  }
+}

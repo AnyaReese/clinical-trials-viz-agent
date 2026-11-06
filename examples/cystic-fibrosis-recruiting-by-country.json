@@ -1,0 +1,166 @@
+{
+  "request": {
+    "query": "Which countries have the most clinical trials with recruiting sites for cystic fibrosis?"
+  },
+  "response": {
+    "visualization": {
+      "type": "bar_chart",
+      "title": "Trials with recruiting sites by country for cystic fibrosis search matches",
+      "encoding": {
+        "x": {
+          "field": "country"
+        },
+        "y": {
+          "field": "trial_count"
+        }
+      },
+      "data": [
+        {
+          "country": "United States",
+          "trial_count": 87
+        },
+        {
+          "country": "France",
+          "trial_count": 46
+        },
+        {
+          "country": "United Kingdom",
+          "trial_count": 24
+        },
+        {
+          "country": "Germany",
+          "trial_count": 14
+        },
+        {
+          "country": "China",
+          "trial_count": 13
+        },
+        {
+          "country": "Canada",
+          "trial_count": 12
+        },
+        {
+          "country": "Italy",
+          "trial_count": 12
+        },
+        {
+          "country": "Egypt",
+          "trial_count": 8
+        },
+        {
+          "country": "Australia",
+          "trial_count": 7
+        },
+        {
+          "country": "Belgium",
+          "trial_count": 7
+        },
+        {
+          "country": "Israel",
+          "trial_count": 7
+        },
+        {
+          "country": "Turkey (T\u00fcrkiye)",
+          "trial_count": 7
+        },
+        {
+          "country": "Netherlands",
+          "trial_count": 6
+        },
+        {
+          "country": "Spain",
+          "trial_count": 6
+        },
+        {
+          "country": "Brazil",
+          "trial_count": 5
+        },
+        {
+          "country": "Poland",
+          "trial_count": 4
+        },
+        {
+          "country": "Sweden",
+          "trial_count": 3
+        },
+        {
+          "country": "Czechia",
+          "trial_count": 2
+        },
+        {
+          "country": "Hong Kong",
+          "trial_count": 2
+        },
+        {
+          "country": "Pakistan",
+          "trial_count": 2
+        },
+        {
+          "country": "Switzerland",
+          "trial_count": 2
+        },
+        {
+          "country": "Denmark",
+          "trial_count": 1
+        },
+        {
+          "country": "Greece",
+          "trial_count": 1
+        },
+        {
+          "country": "Hungary",
+          "trial_count": 1
+        },
+        {
+          "country": "India",
+          "trial_count": 1
+        },
+        {
+          "country": "Iraq",
+          "trial_count": 1
+        },
+        {
+          "country": "Japan",
+          "trial_count": 1
+        },
+        {
+          "country": "Jordan",
+          "trial_count": 1
+        },
+        {
+          "country": "New Zealand",
+          "trial_count": 1
+        },
+        {
+          "country": "Norway",
+          "trial_count": 1
+        },
+        {
+          "country": "Portugal",
+          "trial_count": 1
+        },
+        {
+          "country": "Reunion",
+          "trial_count": 1
+        },
+        {
+          "country": "Russia",
+          "trial_count": 1
+        },
+        {
+          "country": "South Korea",
+          "trial_count": 1
+        }
+      ]
+    },
+    "meta": {
+      "source": "https://clinicaltrials.gov/api/v2/studies",
+      "filters": {
+        "condition": "cystic fibrosis"
+      },
+      "matched_trials": 1784,
+      "trials_with_recruiting_sites": 275,
+      "counting_rule": "One count per trial per country with a site marked RECRUITING and a reported country."
+    }
+  }
+}

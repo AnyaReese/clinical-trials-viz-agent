@@ -1,0 +1,57 @@
+{
+  "request": {
+    "query": "How are clinical trials for cystic fibrosis distributed across phases?"
+  },
+  "response": {
+    "visualization": {
+      "type": "bar_chart",
+      "title": "Trial phase distribution for cystic fibrosis search matches",
+      "encoding": {
+        "x": {
+          "field": "phase"
+        },
+        "y": {
+          "field": "trial_count"
+        }
+      },
+      "data": [
+        {
+          "phase": "Early Phase 1",
+          "trial_count": 16
+        },
+        {
+          "phase": "Phase 1",
+          "trial_count": 210
+        },
+        {
+          "phase": "Phase 2",
+          "trial_count": 285
+        },
+        {
+          "phase": "Phase 3",
+          "trial_count": 196
+        },
+        {
+          "phase": "Phase 4",
+          "trial_count": 109
+        },
+        {
+          "phase": "Not applicable",
+          "trial_count": 478
+        },
+        {
+          "phase": "Not reported",
+          "trial_count": 566
+        }
+      ]
+    },
+    "meta": {
+      "source": "https://clinicaltrials.gov/api/v2/studies",
+      "filters": {
+        "condition": "cystic fibrosis"
+      },
+      "matched_trials": 1784,
+      "counting_rule": "One count per trial per listed phase. Missing phases are grouped as Not reported."
+    }
+  }
+}
