@@ -1,0 +1,80 @@
+{
+  "request": {
+    "query": "How many trials for Pembrolizumab started each year since 2015?"
+  },
+  "response": {
+    "visualization": {
+      "type": "time_series",
+      "title": "Actual trial starts by year for Pembrolizumab search matches",
+      "encoding": {
+        "x": {
+          "field": "year"
+        },
+        "y": {
+          "field": "trial_count"
+        }
+      },
+      "data": [
+        {
+          "year": 2015,
+          "trial_count": 101
+        },
+        {
+          "year": 2016,
+          "trial_count": 171
+        },
+        {
+          "year": 2017,
+          "trial_count": 252
+        },
+        {
+          "year": 2018,
+          "trial_count": 242
+        },
+        {
+          "year": 2019,
+          "trial_count": 233
+        },
+        {
+          "year": 2020,
+          "trial_count": 251
+        },
+        {
+          "year": 2021,
+          "trial_count": 253
+        },
+        {
+          "year": 2022,
+          "trial_count": 276
+        },
+        {
+          "year": 2023,
+          "trial_count": 233
+        },
+        {
+          "year": 2024,
+          "trial_count": 236
+        },
+        {
+          "year": 2025,
+          "trial_count": 212
+        },
+        {
+          "year": 2026,
+          "trial_count": 128
+        }
+      ]
+    },
+    "meta": {
+      "source": "https://clinicaltrials.gov/api/v2/studies",
+      "filters": {
+        "drug_name": "Pembrolizumab",
+        "start_year": 2015
+      },
+      "time_granularity": "year",
+      "start_date_type": "ACTUAL",
+      "matched_trials": 3003,
+      "counted_trials": 2588
+    }
+  }
+}
